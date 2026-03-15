@@ -12,6 +12,8 @@ application {
 group = 'com.circuitree'
 version = '1.0'
 
+def githubUsername = 'atlee-circuitree'
+
 repositories {
     mavenCentral()
 }
@@ -39,8 +41,63 @@ launch4j {
     headerType = 'gui'
     jarTask = project.tasks.shadowJar
     jreMinVersion = '17'
+    icon = "${projectDir}/src/main/resources/icon.ico"
 }
+
+// Fetches the GitHub user's avatar and saves it as an ICO file
+task downloadIcon {
+    def iconFile = file("src/main/resources/icon.ico")
+    outputs.file iconFile
+    doLast {
+        // Fetch avatar_url from GitHub API
+        def apiConn = new URL("https://api.github.com/users/${githubUsername}").openConnection()
+        apiConn.setRequestProperty("User-Agent", "CircuitreeCommitOrganizer")
+        def json = apiConn.inputStream.text
+        def matcher = (json =~ /"avatar_url"\s*:\s*"([^"]+)"/)
+        if (!matcher.find()) throw new GradleException("Could not find avatar_url for ${githubUsername}")
+        def avatarUrl = matcher.group(1)
+
+        // Download PNG bytes
+        def imgConn = new URL(avatarUrl).openConnection()
+        imgConn.setRequestProperty("User-Agent", "CircuitreeCommitOrganizer")
+        def pngBytes = imgConn.inputStream.bytes
+
+        // Wrap PNG inside a minimal ICO container (PNG-ICO, supported on Vista+)
+        def baos = new ByteArrayOutputStream()
+        writeLE16(baos, 0)              // reserved
+        writeLE16(baos, 1)              // type = ICO
+        writeLE16(baos, 1)              // image count = 1
+        baos.write(0)                   // width  (0 = 256)
+        baos.write(0)                   // height (0 = 256)
+        baos.write(0)                   // color count
+        baos.write(0)                   // reserved
+        writeLE16(baos, 1)              // color planes
+        writeLE16(baos, 32)             // bits per pixel
+        writeLE32(baos, pngBytes.length) // size of image data
+        writeLE32(baos, 22)             // offset of image data (6 + 16)
+        baos.write(pngBytes)
+
+        iconFile.parentFile.mkdirs()
+        iconFile.bytes = baos.toByteArray()
+        println "Icon saved to ${iconFile}"
+    }
+}
+
+createExe.dependsOn downloadIcon
+processResources.dependsOn downloadIcon
 
 test {
     useJUnitPlatform()
+}
+
+void writeLE16(OutputStream out, int value) {
+    out.write(value & 0xFF)
+    out.write((value >> 8) & 0xFF)
+}
+
+void writeLE32(OutputStream out, int value) {
+    out.write(value & 0xFF)
+    out.write((value >> 8) & 0xFF)
+    out.write((value >> 16) & 0xFF)
+    out.write((value >> 24) & 0xFF)
 }
