@@ -37,12 +37,14 @@ shadowJar {
 
 launch4j {
     mainClassName = 'com.circuitree.Main'
-    outfile = 'CircuitreeCommitOrganizer.exe'
+    outfile = "${githubUsername}-RepoOrganizer.exe"
     headerType = 'gui'
     jarTask = project.tasks.shadowJar
     jreMinVersion = '17'
     icon = "${projectDir}/src/main/resources/icon.ico"
 }
+
+run.dependsOn createExe
 
 // Fetches the GitHub user's avatar and saves it as an ICO file
 task downloadIcon {
