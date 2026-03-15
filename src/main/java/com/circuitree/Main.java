@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.net.URI;
 
 public class Main {
-    private static final String USERNAME  = "aciner";
+    private static final String USERNAME  = "atlee-circuitree";
     private static final String PAGES_URL = "https://aciner.github.io/CircuitreeCommitManager/";
 
     public static void main(String[] args) throws IOException {
