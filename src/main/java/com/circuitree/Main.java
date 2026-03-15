@@ -10,8 +10,8 @@ import java.io.IOException;
 import java.net.URI;
 
 public class Main {
-    private static final String USERNAME  = "atlee-circuitree";
-    private static final String PAGES_URL = "https://aciner.github.io/CircuitreeCommitManager/";
+    private static final String  USERNAME    = "atlee-circuitree";
+    private static final boolean USE_PAGES   = true;
 
     public static void main(String[] args) throws IOException {
         LoadingScreen loading = new LoadingScreen();
@@ -21,8 +21,9 @@ public class Main {
 
         loading.close();
 
-        if (PAGES_URL != null) {
-            Desktop.getDesktop().browse(URI.create(PAGES_URL));
+        if (USE_PAGES) {
+            String pagesUrl = "https://" + USERNAME + ".github.io/CircuitreeCommitManager/";
+            Desktop.getDesktop().browse(URI.create(pagesUrl));
         } else {
             LocalServer server = new LocalServer(html);
             server.start();
