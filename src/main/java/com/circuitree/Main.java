@@ -12,6 +12,7 @@ import java.net.URI;
 public class Main {
     private static final String  USERNAME    = "atlee-circuitree";
     private static final boolean USE_PAGES   = true;
+    private static final boolean DEBUG_LOCAL = false;
 
     public static void main(String[] args) throws IOException {
         LoadingScreen loading = new LoadingScreen();
@@ -21,7 +22,11 @@ public class Main {
 
         loading.close();
 
-        if (USE_PAGES) {
+        if (DEBUG_LOCAL) {
+            LocalServer server = new LocalServer(html);
+            server.start();
+            Desktop.getDesktop().browse(URI.create("http://localhost:" + server.getPort()));
+        } else if (USE_PAGES) {
             Desktop.getDesktop().browse(URI.create("https://aciner.github.io/CircuitreeCommitManager/"));
         } else {
             LocalServer server = new LocalServer(html);
