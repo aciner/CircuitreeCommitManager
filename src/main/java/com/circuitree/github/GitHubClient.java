@@ -8,9 +8,9 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 public class GitHubClient {
     private static final OkHttpClient httpClient = new OkHttpClient();
@@ -21,19 +21,12 @@ public class GitHubClient {
                 .build();
 
         try (Response response = httpClient.newCall(request).execute()) {
-            if (response.body() == null) return List.of();
-
             JsonArray repos = JsonParser.parseString(response.body().string()).getAsJsonArray();
-
-            List<JsonElement> repoList = new ArrayList<>();
-            repos.forEach(repoList::add);
-
-            repoList.sort(Comparator.comparing(
-                    e -> e.getAsJsonObject().get("pushed_at").getAsString(),
-                    Comparator.reverseOrder()
-            ));
-
-            return repoList;
+            return StreamSupport.stream(repos.spliterator(), false)
+                    .sorted(Comparator.comparing(
+                            e -> e.getAsJsonObject().get("pushed_at").getAsString(),
+                            Comparator.reverseOrder()))
+                    .toList();
         } catch (IOException e) {
             System.err.println("Request failed: " + e.getMessage());
             return List.of();
