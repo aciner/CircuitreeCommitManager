@@ -58,6 +58,9 @@ public class HtmlGenerator {
                     .commit-author { font-size: 0.7em; color: #484f58; }
                     .commit-expand { font-size: 0.65em; color: #484f58; margin-left: 6px; transition: transform 0.15s; display: inline-block; }
                     .commit.expanded .commit-expand { transform: rotate(90deg); }
+                    .commit-annotation { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 10px 14px; background: #0d1117; border-radius: 6px; margin-bottom: 8px; }
+                    .annotation-name { font-size: 0.85em; font-weight: 700; color: #e6edf3; }
+                    .annotation-text { font-size: 0.85em; color: #8b949e; text-align: right; flex: 1; }
 
                     /* Files */
                     .commit-files { display: none; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #21262d; }
@@ -217,9 +220,10 @@ public class HtmlGenerator {
                               let h = d.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
                               h = h % 12 || 12;
                               const time = `${String(h).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} ${ampm}`;
-                              return `<div class="commit" id="commit-${idx}" onclick="toggleCommit(${idx},'${c.sha}')">
+                              const rawMsg = c.commit.message.split('\\n')[0];
+                              return `<div class="commit" id="commit-${idx}" data-msg="${escHtml(rawMsg)}" onclick="toggleCommit(${idx},'${c.sha}')">
                                 <div class="commit-header">
-                                  <span class="commit-msg">${escHtml(c.commit.message.split('\\n')[0])}<span class="commit-expand">▶</span></span>
+                                  <span class="commit-msg">${escHtml(rawMsg)}<span class="commit-expand">▶</span></span>
                                   <div class="commit-right">
                                     <span class="commit-time">${time}</span>
                                     <span class="commit-author">${escHtml(c.commit.author.name)}</span>
@@ -246,15 +250,26 @@ public class HtmlGenerator {
                       }
                       commitEl && commitEl.classList.add('expanded');
                       if (filesDiv.dataset.loaded) { filesDiv.classList.add('open'); return; }
-                      filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">Loading files...</span>';
+
+                      // Check for "Name // Text" annotation pattern
+                      const msg = commitEl.dataset.msg || '';
+                      const annotationMatch = msg.match(/^(.+?)\\s*\\/\\/\\s*(.+)$/);
+                      let annotationHtml = '';
+                      if (annotationMatch) {
+                        annotationHtml = `<div class="commit-annotation">
+                          <span class="annotation-name">${escHtml(annotationMatch[1].trim())}</span>
+                          <span class="annotation-text">${escHtml(annotationMatch[2].trim())}</span>
+                        </div>`;
+                      }
+                      filesDiv.innerHTML = annotationHtml + '<span style="color:#484f58;font-size:0.82em">Loading files...</span>';
                       filesDiv.classList.add('open');
                       fetch(`https://api.github.com/repos/${currentFullName}/commits/${sha}`)
                         .then(r => r.json())
                         .then(data => {
                           if (!data.files || data.files.length === 0) {
-                            filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">No files changed.</span>';
+                            filesDiv.innerHTML = annotationHtml + '<span style="color:#484f58;font-size:0.82em">No files changed.</span>';
                           } else {
-                            filesDiv.innerHTML = data.files.map((f, i) => {
+                            filesDiv.innerHTML = annotationHtml + data.files.map((f, i) => {
                               const fid = `diff-${idx}-${i}`;
                               const sc  = f.status === 'added' ? 'added' : f.status === 'removed' ? 'removed' : 'modified';
                               return `<div class="file-row" id="row-${fid}">
