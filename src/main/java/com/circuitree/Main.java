@@ -22,8 +22,7 @@ public class Main {
         loading.close();
 
         if (USE_PAGES) {
-            String pagesUrl = "https://" + USERNAME + ".github.io/CircuitreeCommitManager/";
-            Desktop.getDesktop().browse(URI.create(pagesUrl));
+            Desktop.getDesktop().browse(URI.create("https://aciner.github.io/CircuitreeCommitManager/"));
         } else {
             LocalServer server = new LocalServer(html);
             server.start();
