@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Repositories</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; height: 100vh; background: #0d1117; color: #c9d1d9; overflow: hidden; }
+
+    /* Left panel */
+    #sidebar { width: 320px; min-width: 320px; height: 100vh; overflow-y: auto; padding: 24px 16px; border-right: 1px solid #21262d; }
+    #sidebar h1 { font-size: 1.6em; color: #e6edf3; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+    .repo { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px 16px; margin: 8px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s, box-shadow 0.2s; }
+    .repo:hover, .repo.active { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88,166,255,0.1); }
+    .repo-name { font-weight: 600; color: #58a6ff; font-size: 0.95em; }
+    .date { color: #484f58; font-size: 0.75em; white-space: nowrap; margin-left: 10px; }
+    details { margin-top: 6px; }
+    details > summary { cursor: pointer; color: #6e7681; font-size: 0.85em; padding: 8px 4px; list-style: none; display: flex; align-items: center; gap: 6px; user-select: none; text-decoration: underline; }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before { content: '▶'; font-size: 0.7em; transition: transform 0.2s; display: inline-block; }
+    details[open] > summary::before { transform: rotate(90deg); }
+    details > summary:hover { color: #8b949e; }
+
+    /* Right panel */
+    #detail { flex: 1; padding: 48px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+    #detail.empty { justify-content: center; align-items: center; }
+    #placeholder { color: #30363d; font-size: 1.1em; }
+    #detail-name { font-size: 2em; font-weight: 700; color: #e6edf3; }
+    #detail-desc { color: #8b949e; font-size: 1em; line-height: 1.6; }
+    #detail-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; flex-direction: column; gap: 4px; }
+    .meta-label { font-size: 0.75em; color: #484f58; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 1em; color: #c9d1d9; font-weight: 600; }
+    #detail-link { display: inline-block; padding: 10px 20px; background: #238636; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9em; align-self: flex-start; transition: background 0.2s; }
+    #detail-link:hover { background: #2ea043; }
+
+    /* Commits */
+    #commits-section { display: flex; flex-direction: column; gap: 18px; padding-top: 10px; }
+    #commits-section h2 { font-size: 1em; color: #e6edf3; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+    .commit-day { display: flex; flex-direction: column; gap: 2px; }
+    .commit-day + .commit-day { margin-top: 16px; }
+    .commit-day-label { font-size: 0.72em; font-weight: 600; color: #8b949e; letter-spacing: 0.8px; text-transform: uppercase; padding: 0 0 5px 0; margin-bottom: 3px; border-bottom: 1px solid #21262d; }
+    .commit { background: #161b22; border-left: 2px solid #21262d; border-radius: 0 6px 6px 0; padding: 8px 14px; margin-left: 16px; cursor: pointer; transition: border-color 0.15s; }
+    .commit:hover { border-left-color: #58a6ff; }
+    .commit-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .commit-msg { font-size: 0.88em; color: #c9d1d9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .commit-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+    .commit-time { font-size: 0.76em; color: #8b949e; }
+    .commit-author { font-size: 0.7em; color: #484f58; }
+
+    /* Files */
+    .commit-files { display: none; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #21262d; }
+    .commit-files.open { display: flex; }
+    .file-row { display: flex; flex-direction: column; background: #0d1117; border: 1px solid #21262d; border-radius: 6px; overflow: hidden; }
+    .file-header { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; transition: background 0.15s; user-select: none; }
+    .file-header:hover { background: #1c2128; }
+    .file-chevron { font-size: 0.6em; color: #484f58; transition: transform 0.15s; }
+    .file-row.open .file-chevron { transform: rotate(90deg); }
+    .file-status { font-size: 0.68em; font-weight: 700; padding: 1px 5px; border-radius: 4px; text-transform: uppercase; }
+    .file-status.added    { background: rgba(63,185,80,0.15);  color: #3fb950; }
+    .file-status.removed  { background: rgba(248,81,73,0.15);  color: #f85149; }
+    .file-status.modified { background: rgba(210,153,34,0.15); color: #d2a22e; }
+    .file-name { font-size: 0.8em; color: #c9d1d9; flex: 1; }
+    .file-changes { font-size: 0.72em; color: #484f58; white-space: nowrap; }
+    .file-diff { display: none; overflow-x: auto; border-top: 1px solid #21262d; }
+    .file-diff.open { display: block; }
+    .file-diff pre { font-family: 'Consolas', monospace; font-size: 0.76em; line-height: 1.05; padding: 4px 10px; margin: 0; background: #010409; }
+    .diff-add { color: #3fb950; background: rgba(63,185,80,0.08); display: block; }
+    .diff-del { color: #f85149; background: rgba(248,81,73,0.08); display: block; }
+    .diff-hunk { color: #79c0ff; display: block; }
+    .diff-ctx { color: #8b949e; display: block; }
+    #commits-loading { color: #484f58; font-size: 0.9em; }
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #30363d; }
+    /* Commit expand indicator */
+    .commit-expand { font-size: 0.65em; color: #484f58; margin-left: 6px; transition: transform 0.15s; display: inline-block; }
+    .commit.expanded .commit-expand { transform: rotate(90deg); }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h1>Repositories</h1>
+<div class="repo" onclick="showDetail('Rebuilt-new','atlee-circuitree/Rebuilt-new','https://github.com/atlee-circuitree/Rebuilt-new','No description.','Java','26/03/15, 02:35:56 PM','26/01/17, 12:51:19 PM',0,0,0)">
+  <span class="repo-name">Rebuilt-new</span>
+  <span class="date">26/03/15, 02:35:56 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Rebuilt','atlee-circuitree/Rebuilt','https://github.com/atlee-circuitree/Rebuilt','No description.','Java','26/01/15, 07:12:32 PM','26/01/15, 06:23:11 PM',0,0,0)">
+  <span class="repo-name">Rebuilt</span>
+  <span class="date">26/01/15, 07:12:32 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Rebuilt-2026-Season','atlee-circuitree/Rebuilt-2026-Season','https://github.com/atlee-circuitree/Rebuilt-2026-Season','No description.','Unknown','26/01/15, 06:07:21 PM','26/01/15, 06:07:19 PM',0,0,0)">
+  <span class="repo-name">Rebuilt-2026-Season</span>
+  <span class="date">26/01/15, 06:07:21 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Rebuilt-2026','atlee-circuitree/Rebuilt-2026','https://github.com/atlee-circuitree/Rebuilt-2026','No description.','Java','26/01/15, 04:40:50 PM','26/01/13, 04:49:29 PM',0,0,0)">
+  <span class="repo-name">Rebuilt-2026</span>
+  <span class="date">26/01/15, 04:40:50 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2026-Rebuilt','atlee-circuitree/2026-Rebuilt','https://github.com/atlee-circuitree/2026-Rebuilt','No description.','Unknown','26/01/12, 05:20:08 PM','26/01/12, 05:19:40 PM',0,0,0)">
+  <span class="repo-name">2026-Rebuilt</span>
+  <span class="date">26/01/12, 05:20:08 PM</span>
+</div>
+<details><summary>See more</summary>
+<div class="repo" onclick="showDetail('ReefScape','atlee-circuitree/ReefScape','https://github.com/atlee-circuitree/ReefScape','No description.','Java','25/12/18, 04:24:45 PM','25/01/14, 05:02:54 PM',1,0,0)">
+  <span class="repo-name">ReefScape</span>
+  <span class="date">25/12/18, 04:24:45 PM</span>
+</div>
+<div class="repo" onclick="showDetail('outreach-bot','atlee-circuitree/outreach-bot','https://github.com/atlee-circuitree/outreach-bot','No description.','Unknown','25/12/18, 04:23:51 PM','25/10/09, 05:38:13 PM',0,0,0)">
+  <span class="repo-name">outreach-bot</span>
+  <span class="date">25/12/18, 04:23:51 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Outreach-robot','atlee-circuitree/Outreach-robot','https://github.com/atlee-circuitree/Outreach-robot','No description.','Unknown','25/11/15, 03:24:53 PM','25/11/15, 09:31:26 AM',0,0,0)">
+  <span class="repo-name">Outreach-robot</span>
+  <span class="date">25/11/15, 03:24:53 PM</span>
+</div>
+<div class="repo" onclick="showDetail('O--BOT','atlee-circuitree/O--BOT','https://github.com/atlee-circuitree/O--BOT','No description.','Java','25/06/05, 03:42:29 PM','25/04/29, 05:48:41 PM',0,0,0)">
+  <span class="repo-name">O--BOT</span>
+  <span class="date">25/06/05, 03:42:29 PM</span>
+</div>
+<div class="repo" onclick="showDetail('o-bot','atlee-circuitree/o-bot','https://github.com/atlee-circuitree/o-bot','No description.','Unknown','25/04/29, 05:42:46 PM','25/04/29, 05:42:46 PM',0,0,0)">
+  <span class="repo-name">o-bot</span>
+  <span class="date">25/04/29, 05:42:46 PM</span>
+</div>
+<div class="repo" onclick="showDetail('flare-robot-2024-new','atlee-circuitree/flare-robot-2024-new','https://github.com/atlee-circuitree/flare-robot-2024-new','No description.','Unknown','24/11/12, 05:04:24 PM','24/11/12, 05:04:22 PM',0,0,0)">
+  <span class="repo-name">flare-robot-2024-new</span>
+  <span class="date">24/11/12, 05:04:24 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Crescendo','atlee-circuitree/Crescendo','https://github.com/atlee-circuitree/Crescendo','No description.','Java','24/10/26, 08:19:30 AM','24/03/09, 11:35:28 AM',0,0,0)">
+  <span class="repo-name">Crescendo</span>
+  <span class="date">24/10/26, 08:19:30 AM</span>
+</div>
+<div class="repo" onclick="showDetail('2025FRCrobot-redo','atlee-circuitree/2025FRCrobot-redo','https://github.com/atlee-circuitree/2025FRCrobot-redo',';ioujedghikjbuukfcvluttgcv boosting the look','Unknown','24/10/10, 05:04:41 PM','24/10/10, 05:04:38 PM',0,0,0)">
+  <span class="repo-name">2025FRCrobot-redo</span>
+  <span class="date">24/10/10, 05:04:41 PM</span>
+</div>
+<div class="repo" onclick="showDetail('flare-robot-2024-outreach','atlee-circuitree/flare-robot-2024-outreach','https://github.com/atlee-circuitree/flare-robot-2024-outreach','No description.','Unknown','24/10/10, 04:32:33 PM','24/10/10, 04:32:31 PM',0,0,0)">
+  <span class="repo-name">flare-robot-2024-outreach</span>
+  <span class="date">24/10/10, 04:32:33 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2025FRCrobot','atlee-circuitree/2025FRCrobot','https://github.com/atlee-circuitree/2025FRCrobot','No description.','Unknown','24/10/10, 04:14:18 PM','24/10/10, 04:14:16 PM',0,0,0)">
+  <span class="repo-name">2025FRCrobot</span>
+  <span class="date">24/10/10, 04:14:18 PM</span>
+</div>
+<div class="repo" onclick="showDetail('9-12-V2-USE-THIS-2024-Robotics','atlee-circuitree/9-12-V2-USE-THIS-2024-Robotics','https://github.com/atlee-circuitree/9-12-V2-USE-THIS-2024-Robotics','ol;/jkasdfklj;sadfhjkl.asdfhjkl/zdfsghjkl;adsfhjkl;adSFhil;k','Unknown','24/09/12, 05:24:04 PM','24/09/12, 05:24:02 PM',0,0,0)">
+  <span class="repo-name">9-12-V2-USE-THIS-2024-Robotics</span>
+  <span class="date">24/09/12, 05:24:04 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2024_Rev_Template','atlee-circuitree/2024_Rev_Template','https://github.com/atlee-circuitree/2024_Rev_Template','No description.','Java','24/04/18, 06:05:58 PM','24/04/18, 05:30:29 PM',0,1,0)">
+  <span class="repo-name">2024_Rev_Template</span>
+  <span class="date">24/04/18, 06:05:58 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Dylan-Swerve','atlee-circuitree/Dylan-Swerve','https://github.com/atlee-circuitree/Dylan-Swerve','No description.','Java','24/04/09, 05:30:37 PM','24/04/09, 05:23:09 PM',0,0,0)">
+  <span class="repo-name">Dylan-Swerve</span>
+  <span class="date">24/04/09, 05:30:37 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Auto_Generated_Swerve','atlee-circuitree/Auto_Generated_Swerve','https://github.com/atlee-circuitree/Auto_Generated_Swerve','No description.','Java','24/03/02, 08:44:17 AM','24/01/13, 05:28:26 PM',0,3,0)">
+  <span class="repo-name">Auto_Generated_Swerve</span>
+  <span class="date">24/03/02, 08:44:17 AM</span>
+</div>
+<div class="repo" onclick="showDetail('BasicSwerve','atlee-circuitree/BasicSwerve','https://github.com/atlee-circuitree/BasicSwerve','No description.','Java','24/01/13, 05:26:49 PM','24/01/07, 12:25:34 AM',0,0,0)">
+  <span class="repo-name">BasicSwerve</span>
+  <span class="date">24/01/13, 05:26:49 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Centerstage','atlee-circuitree/Centerstage','https://github.com/atlee-circuitree/Centerstage','No description.','Java','23/12/18, 05:46:54 PM','23/11/18, 10:51:58 AM',0,1,0)">
+  <span class="repo-name">Centerstage</span>
+  <span class="date">23/12/18, 05:46:54 PM</span>
+</div>
+<div class="repo" onclick="showDetail('RoadRunnerTest','atlee-circuitree/RoadRunnerTest','https://github.com/atlee-circuitree/RoadRunnerTest','No description.','Java','23/11/28, 04:35:23 PM','23/11/28, 04:35:21 PM',0,1,0)">
+  <span class="repo-name">RoadRunnerTest</span>
+  <span class="date">23/11/28, 04:35:23 PM</span>
+</div>
+<div class="repo" onclick="showDetail('YAGSL_Example_1599','atlee-circuitree/YAGSL_Example_1599','https://github.com/atlee-circuitree/YAGSL_Example_1599','No description.','Java','23/11/14, 05:44:23 PM','23/11/14, 05:33:11 PM',0,0,0)">
+  <span class="repo-name">YAGSL_Example_1599</span>
+  <span class="date">23/11/14, 05:44:23 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Offseason_Rev_Swerve','atlee-circuitree/Offseason_Rev_Swerve','https://github.com/atlee-circuitree/Offseason_Rev_Swerve','No description.','Java','23/10/27, 08:09:00 PM','23/05/15, 04:32:04 PM',0,0,0)">
+  <span class="repo-name">Offseason_Rev_Swerve</span>
+  <span class="date">23/10/27, 08:09:00 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Barcode_Sign','atlee-circuitree/Barcode_Sign','https://github.com/atlee-circuitree/Barcode_Sign','Sign in/out system using barcodes','Rust','23/10/26, 05:12:43 PM','23/10/12, 04:12:28 PM',0,1,0)">
+  <span class="repo-name">Barcode_Sign</span>
+  <span class="date">23/10/26, 05:12:43 PM</span>
+</div>
+<div class="repo" onclick="showDetail('ORCAtree','atlee-circuitree/ORCAtree','https://github.com/atlee-circuitree/ORCAtree','No description.','Java','23/09/30, 06:43:42 PM','23/09/30, 06:41:24 PM',0,0,0)">
+  <span class="repo-name">ORCAtree</span>
+  <span class="date">23/09/30, 06:43:42 PM</span>
+</div>
+<div class="repo" onclick="showDetail('CHARGED_UP','atlee-circuitree/CHARGED_UP','https://github.com/atlee-circuitree/CHARGED_UP','No description.','Java','23/09/26, 05:20:18 PM','23/01/10, 04:16:35 PM',2,1,0)">
+  <span class="repo-name">CHARGED_UP</span>
+  <span class="date">23/09/26, 05:20:18 PM</span>
+</div>
+<div class="repo" onclick="showDetail('SwerveExampleTest','atlee-circuitree/SwerveExampleTest','https://github.com/atlee-circuitree/SwerveExampleTest','No description.','Java','23/04/03, 10:57:41 AM','23/04/03, 10:57:11 AM',0,0,0)">
+  <span class="repo-name">SwerveExampleTest</span>
+  <span class="date">23/04/03, 10:57:41 AM</span>
+</div>
+<div class="repo" onclick="showDetail('Phoenix-Examples','atlee-circuitree/Phoenix-Examples','https://github.com/atlee-circuitree/Phoenix-Examples','No description.','Java','23/03/04, 12:23:29 PM','23/03/04, 12:22:29 PM',0,0,0)">
+  <span class="repo-name">Phoenix-Examples</span>
+  <span class="date">23/03/04, 12:23:29 PM</span>
+</div>
+<div class="repo" onclick="showDetail('POWER-PLAY','atlee-circuitree/POWER-PLAY','https://github.com/atlee-circuitree/POWER-PLAY','FTC 2022-2023 repo','C','23/02/10, 01:22:07 PM','22/11/27, 04:44:53 PM',0,0,0)">
+  <span class="repo-name">POWER-PLAY</span>
+  <span class="date">23/02/10, 01:22:07 PM</span>
+</div>
+<div class="repo" onclick="showDetail('BasicTank','atlee-circuitree/BasicTank','https://github.com/atlee-circuitree/BasicTank','No description.','Java','23/02/07, 04:40:01 PM','23/02/02, 01:23:29 PM',0,0,0)">
+  <span class="repo-name">BasicTank</span>
+  <span class="date">23/02/07, 04:40:01 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Python_AprilTags','atlee-circuitree/Python_AprilTags','https://github.com/atlee-circuitree/Python_AprilTags','Test code to evaluate OpenCV and PyPi Apriltags Python module to detect FRC vision targets','Python','23/01/07, 06:45:10 PM','23/01/07, 03:44:30 PM',0,1,0)">
+  <span class="repo-name">Python_AprilTags</span>
+  <span class="date">23/01/07, 06:45:10 PM</span>
+</div>
+<div class="repo" onclick="showDetail('CircuitWeaveV2','atlee-circuitree/CircuitWeaveV2','https://github.com/atlee-circuitree/CircuitWeaveV2','Simon\'s 2nd attempt at creating a custom swerve autonomous','Java','23/01/01, 05:28:01 PM','22/09/13, 04:52:13 PM',0,0,0)">
+  <span class="repo-name">CircuitWeaveV2</span>
+  <span class="date">23/01/01, 05:28:01 PM</span>
+</div>
+<div class="repo" onclick="showDetail('CircuitSeed2022','atlee-circuitree/CircuitSeed2022','https://github.com/atlee-circuitree/CircuitSeed2022','Practice tank repository for the 22-23 season','Java','22/12/15, 06:26:28 PM','22/12/06, 04:05:36 PM',0,0,0)">
+  <span class="repo-name">CircuitSeed2022</span>
+  <span class="date">22/12/15, 06:26:28 PM</span>
+</div>
+<div class="repo" onclick="showDetail('FTC_Training','atlee-circuitree/FTC_Training','https://github.com/atlee-circuitree/FTC_Training','Circuitree repository for FTC code training.','Java','22/12/06, 05:36:09 PM','22/09/22, 04:57:26 PM',0,0,0)">
+  <span class="repo-name">FTC_Training</span>
+  <span class="date">22/12/06, 05:36:09 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Road_Runner_Test_2','atlee-circuitree/Road_Runner_Test_2','https://github.com/atlee-circuitree/Road_Runner_Test_2','Test repository for Road Runner','Java','22/11/29, 10:19:48 PM','22/10/04, 09:53:39 PM',0,0,0)">
+  <span class="repo-name">Road_Runner_Test_2</span>
+  <span class="date">22/11/29, 10:19:48 PM</span>
+</div>
+<div class="repo" onclick="showDetail('POWER_PLAY_OLD','atlee-circuitree/POWER_PLAY_OLD','https://github.com/atlee-circuitree/POWER_PLAY_OLD','Old Power Play repo','C','22/11/27, 06:44:05 PM','22/11/03, 04:49:48 PM',0,0,0)">
+  <span class="repo-name">POWER_PLAY_OLD</span>
+  <span class="date">22/11/27, 06:44:05 PM</span>
+</div>
+<div class="repo" onclick="showDetail('FREIGHT-FRENZY','atlee-circuitree/FREIGHT-FRENZY','https://github.com/atlee-circuitree/FREIGHT-FRENZY','2021 FTC Season Repositiory with controller updated to v8.1','Java','22/11/09, 04:44:31 PM','21/09/23, 04:59:53 PM',0,0,0)">
+  <span class="repo-name">FREIGHT-FRENZY</span>
+  <span class="date">22/11/09, 04:44:31 PM</span>
+</div>
+<div class="repo" onclick="showDetail('RAPID_REACT_2','atlee-circuitree/RAPID_REACT_2','https://github.com/atlee-circuitree/RAPID_REACT_2','If at first you don\'t succeed, try try again. This repository includes working swerve code, and is what Simon\'s tutorial is based off of. Main branch includes game-specific code, just-drivetrain branch is just the drivetrain','Java','22/11/04, 09:52:11 PM','22/02/23, 04:41:34 PM',2,0,0)">
+  <span class="repo-name">RAPID_REACT_2</span>
+  <span class="date">22/11/04, 09:52:11 PM</span>
+</div>
+<div class="repo" onclick="showDetail('OpenCV','atlee-circuitree/OpenCV','https://github.com/atlee-circuitree/OpenCV','FTC test repo for OpenCV','Unknown','22/10/20, 04:24:10 PM','22/10/20, 04:24:09 PM',0,0,0)">
+  <span class="repo-name">OpenCV</span>
+  <span class="date">22/10/20, 04:24:10 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Road_Runner_Test','atlee-circuitree/Road_Runner_Test','https://github.com/atlee-circuitree/Road_Runner_Test','No description.','Java','22/10/04, 11:22:52 PM','22/09/19, 05:35:10 PM',0,0,0)">
+  <span class="repo-name">Road_Runner_Test</span>
+  <span class="date">22/10/04, 11:22:52 PM</span>
+</div>
+<div class="repo" onclick="showDetail('RAPID_REACT_3','atlee-circuitree/RAPID_REACT_3','https://github.com/atlee-circuitree/RAPID_REACT_3','Third time\'s the charm. Using pre-built drive code','Java','22/04/01, 02:10:09 PM','22/03/01, 03:26:41 PM',0,1,0)">
+  <span class="repo-name">RAPID_REACT_3</span>
+  <span class="date">22/04/01, 02:10:09 PM</span>
+</div>
+<div class="repo" onclick="showDetail('RAPID_REACT','atlee-circuitree/RAPID_REACT','https://github.com/atlee-circuitree/RAPID_REACT','2022 FRC Season','Java','22/02/23, 05:02:16 PM','22/01/11, 04:59:35 PM',0,0,0)">
+  <span class="repo-name">RAPID_REACT</span>
+  <span class="date">22/02/23, 05:02:16 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Swerve_Custom','atlee-circuitree/Swerve_Custom','https://github.com/atlee-circuitree/Swerve_Custom','No description.','Java','22/01/11, 08:02:33 AM','21/04/28, 05:11:22 PM',0,0,0)">
+  <span class="repo-name">Swerve_Custom</span>
+  <span class="date">22/01/11, 08:02:33 AM</span>
+</div>
+<div class="repo" onclick="showDetail('2020_Bot_Imported','atlee-circuitree/2020_Bot_Imported','https://github.com/atlee-circuitree/2020_Bot_Imported','No description.','Java','21/07/21, 05:19:56 PM','21/07/09, 11:01:32 AM',0,0,0)">
+  <span class="repo-name">2020_Bot_Imported</span>
+  <span class="date">21/07/21, 05:19:56 PM</span>
+</div>
+<div class="repo" onclick="showDetail('ULTIMATEGOAL','atlee-circuitree/ULTIMATEGOAL','https://github.com/atlee-circuitree/ULTIMATEGOAL','No description.','Java','21/05/26, 05:59:14 PM','20/09/17, 05:02:07 PM',0,0,0)">
+  <span class="repo-name">ULTIMATEGOAL</span>
+  <span class="date">21/05/26, 05:59:14 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Swerve_Example','atlee-circuitree/Swerve_Example','https://github.com/atlee-circuitree/Swerve_Example','No description.','Java','21/05/26, 03:38:44 PM','21/04/23, 05:33:32 PM',0,0,0)">
+  <span class="repo-name">Swerve_Example</span>
+  <span class="date">21/05/26, 03:38:44 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2021-CircuitSeed','atlee-circuitree/2021-CircuitSeed','https://github.com/atlee-circuitree/2021-CircuitSeed','Simon\'s attempts to make working FRC code','Java','21/04/28, 04:37:27 PM','21/03/17, 04:12:10 PM',0,0,0)">
+  <span class="repo-name">2021-CircuitSeed</span>
+  <span class="date">21/04/28, 04:37:27 PM</span>
+</div>
+<div class="repo" onclick="showDetail('SwerveTest','atlee-circuitree/SwerveTest','https://github.com/atlee-circuitree/SwerveTest','No description.','Java','21/04/19, 04:58:51 PM','21/04/19, 04:51:05 PM',0,0,0)">
+  <span class="repo-name">SwerveTest</span>
+  <span class="date">21/04/19, 04:58:51 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2021-Circuitseed-Generated-Files','atlee-circuitree/2021-Circuitseed-Generated-Files','https://github.com/atlee-circuitree/2021-Circuitseed-Generated-Files','The project the Characterization suite created to run data analysis on. Use as needed ','Java','21/04/12, 06:07:39 PM','21/04/12, 06:05:57 PM',0,0,0)">
+  <span class="repo-name">2021-Circuitseed-Generated-Files</span>
+  <span class="date">21/04/12, 06:07:39 PM</span>
+</div>
+<div class="repo" onclick="showDetail('FRC-2021-Test-2-Imported','atlee-circuitree/FRC-2021-Test-2-Imported','https://github.com/atlee-circuitree/FRC-2021-Test-2-Imported','No description.','Java','21/03/28, 09:44:34 AM','21/03/14, 11:15:15 AM',0,0,0)">
+  <span class="repo-name">FRC-2021-Test-2-Imported</span>
+  <span class="date">21/03/28, 09:44:34 AM</span>
+</div>
+<div class="repo" onclick="showDetail('FRC_2021_Test_2','atlee-circuitree/FRC_2021_Test_2','https://github.com/atlee-circuitree/FRC_2021_Test_2','No description.','Java','21/03/14, 07:20:44 AM','21/03/14, 07:19:42 AM',0,0,0)">
+  <span class="repo-name">FRC_2021_Test_2</span>
+  <span class="date">21/03/14, 07:20:44 AM</span>
+</div>
+<div class="repo" onclick="showDetail('FRC-2021-Test','atlee-circuitree/FRC-2021-Test','https://github.com/atlee-circuitree/FRC-2021-Test','No description.','Java','21/03/11, 04:44:29 PM','21/01/25, 05:32:31 PM',0,0,0)">
+  <span class="repo-name">FRC-2021-Test</span>
+  <span class="date">21/03/11, 04:44:29 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2020_Bot_Final','atlee-circuitree/2020_Bot_Final','https://github.com/atlee-circuitree/2020_Bot_Final','No description.','Java','21/03/03, 06:15:21 PM','20/02/05, 03:51:30 PM',1,0,0)">
+  <span class="repo-name">2020_Bot_Final</span>
+  <span class="date">21/03/03, 06:15:21 PM</span>
+</div>
+<div class="repo" onclick="showDetail('SkystoneGitTraining','atlee-circuitree/SkystoneGitTraining','https://github.com/atlee-circuitree/SkystoneGitTraining','No description.','Java','20/09/04, 05:06:02 PM','20/08/07, 01:54:23 PM',0,0,0)">
+  <span class="repo-name">SkystoneGitTraining</span>
+  <span class="date">20/09/04, 05:06:02 PM</span>
+</div>
+<div class="repo" onclick="showDetail('LidarTest','atlee-circuitree/LidarTest','https://github.com/atlee-circuitree/LidarTest','No description.','Java','20/02/28, 08:36:58 AM','20/01/31, 07:46:18 PM',0,1,0)">
+  <span class="repo-name">LidarTest</span>
+  <span class="date">20/02/28, 08:36:58 AM</span>
+</div>
+<div class="repo" onclick="showDetail('DynamicTilt','atlee-circuitree/DynamicTilt','https://github.com/atlee-circuitree/DynamicTilt','No description.','Java','20/02/26, 10:57:08 PM','20/02/26, 10:26:55 PM',0,0,0)">
+  <span class="repo-name">DynamicTilt</span>
+  <span class="date">20/02/26, 10:57:08 PM</span>
+</div>
+<div class="repo" onclick="showDetail('SkyStone','atlee-circuitree/SkyStone','https://github.com/atlee-circuitree/SkyStone','FTC SDK','Java','20/02/26, 09:35:09 PM','19/08/14, 07:43:36 AM',0,0,0)">
+  <span class="repo-name">SkyStone</span>
+  <span class="date">20/02/26, 09:35:09 PM</span>
+</div>
+<div class="repo" onclick="showDetail('LimelightCenter','atlee-circuitree/LimelightCenter','https://github.com/atlee-circuitree/LimelightCenter','No description.','Java','20/02/25, 11:25:00 PM','20/02/25, 11:19:38 PM',0,0,0)">
+  <span class="repo-name">LimelightCenter</span>
+  <span class="date">20/02/25, 11:25:00 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Sample-Drivetrain','atlee-circuitree/Sample-Drivetrain','https://github.com/atlee-circuitree/Sample-Drivetrain','No description.','Unknown','20/02/10, 07:34:46 AM','20/02/10, 07:34:37 AM',0,0,0)">
+  <span class="repo-name">Sample-Drivetrain</span>
+  <span class="date">20/02/10, 07:34:46 AM</span>
+</div>
+<div class="repo" onclick="showDetail('Sample_Drivetrain','atlee-circuitree/Sample_Drivetrain','https://github.com/atlee-circuitree/Sample_Drivetrain','No description.','Unknown','20/02/09, 09:09:16 PM','20/02/09, 09:09:08 PM',0,0,0)">
+  <span class="repo-name">Sample_Drivetrain</span>
+  <span class="date">20/02/09, 09:09:16 PM</span>
+</div>
+<div class="repo" onclick="showDetail('Basic-Drive','atlee-circuitree/Basic-Drive','https://github.com/atlee-circuitree/Basic-Drive','No description.','Unknown','20/02/08, 02:59:21 PM','20/02/08, 02:59:16 PM',0,0,0)">
+  <span class="repo-name">Basic-Drive</span>
+  <span class="date">20/02/08, 02:59:21 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2020_Bot_Rework','atlee-circuitree/2020_Bot_Rework','https://github.com/atlee-circuitree/2020_Bot_Rework','No description.','Java','20/02/01, 02:54:20 PM','20/01/25, 12:29:02 PM',0,0,0)">
+  <span class="repo-name">2020_Bot_Rework</span>
+  <span class="date">20/02/01, 02:54:20 PM</span>
+</div>
+<div class="repo" onclick="showDetail('2020_bot','atlee-circuitree/2020_bot','https://github.com/atlee-circuitree/2020_bot','No description.','Java','20/01/25, 12:30:52 PM','20/01/18, 01:01:55 PM',1,1,0)">
+  <span class="repo-name">2020_bot</span>
+  <span class="date">20/01/25, 12:30:52 PM</span>
+</div>
+<div class="repo" onclick="showDetail('FTC-2018-19','atlee-circuitree/FTC-2018-19','https://github.com/atlee-circuitree/FTC-2018-19','Atlee Circuitree - FTC code for the 2018-2019 season','Java','19/08/10, 11:52:47 AM','19/08/10, 10:13:05 AM',0,0,0)">
+  <span class="repo-name">FTC-2018-19</span>
+  <span class="date">19/08/10, 11:52:47 AM</span>
+</div>
+</details>
+  </div>
+  <div id="detail" class="empty">
+    <span id="placeholder">← Select a repository</span>
+    <div id="detail-content" style="display:none; width:100%; flex-direction:column; gap:20px;">
+      <div id="detail-name"></div>
+      <div id="detail-desc"></div>
+      <div id="detail-meta">
+        <div class="meta-item"><span class="meta-label">Language</span><span class="meta-value" id="d-lang"></span></div>
+        <div class="meta-item"><span class="meta-label">Stars</span><span class="meta-value" id="d-stars"></span></div>
+        <div class="meta-item"><span class="meta-label">Forks</span><span class="meta-value" id="d-forks"></span></div>
+        <div class="meta-item"><span class="meta-label">Open Issues</span><span class="meta-value" id="d-issues"></span></div>
+        <div class="meta-item"><span class="meta-label">Last Pushed</span><span class="meta-value" id="d-pushed"></span></div>
+        <div class="meta-item"><span class="meta-label">Created</span><span class="meta-value" id="d-created"></span></div>
+      </div>
+      <a id="detail-link" target="_blank">Open on GitHub</a>
+      <div id="commits-section">
+        <h2>Commits</h2>
+        <div id="commits-list"><span id="commits-loading">Loading commits...</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let currentFullName = '';
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function statusClass(s) {
+      if (s === 'added') return 'added';
+      if (s === 'removed') return 'removed';
+      return 'modified';
+    }
+
+    function renderPatch(patch) {
+      if (!patch) return '<span class="diff-ctx">Binary or empty file</span>';
+      return patch.split('\n').map(line => {
+        if (line.startsWith('+')) return `<span class="diff-add">${escHtml(line)}</span>`;
+        if (line.startsWith('-')) return `<span class="diff-del">${escHtml(line)}</span>`;
+        if (line.startsWith('@@')) return `<span class="diff-hunk">${escHtml(line)}</span>`;
+        return `<span class="diff-ctx">${escHtml(line)}</span>`;
+      }).join('\n');
+    }
+
+    function toggleFile(e, fileId) {
+      e.stopPropagation();
+      const diff = document.getElementById(fileId);
+      const row = document.getElementById('row-' + fileId);
+      if (diff) diff.classList.toggle('open');
+      if (row) row.classList.toggle('open');
+    }
+
+    function toggleCommit(commitId, sha) {
+      const filesDiv = document.getElementById('files-' + commitId);
+      const commitEl = document.getElementById('commit-' + commitId);
+      if (!filesDiv) return;
+      if (filesDiv.classList.contains('open')) {
+        filesDiv.classList.remove('open');
+        commitEl && commitEl.classList.remove('expanded');
+        return;
+      }
+      commitEl && commitEl.classList.add('expanded');
+      if (filesDiv.dataset.loaded) { filesDiv.classList.add('open'); return; }
+      filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">Loading files...</span>';
+      filesDiv.classList.add('open');
+      fetch(`https://api.github.com/repos/${currentFullName}/commits/${sha}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.files || data.files.length === 0) {
+            filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">No files changed.</span>';
+          } else {
+            filesDiv.innerHTML = data.files.map((f, idx) => {
+              const fid = `diff-${commitId}-${idx}`;
+              const added = f.additions || 0, deleted = f.deletions || 0;
+              return `<div class="file-row" id="row-${fid}">
+                <div class="file-header" onclick="toggleFile(event,'${fid}')">
+                  <span class="file-chevron">▶</span>
+                  <span class="file-status ${statusClass(f.status)}">${f.status}</span>
+                  <span class="file-name">${escHtml(f.filename)}</span>
+                  <span class="file-changes">+${added} -${deleted}</span>
+                </div>
+                <div class="file-diff" id="${fid}">
+                  <pre>${renderPatch(f.patch)}</pre>
+                </div>
+              </div>`;
+            }).join('');
+          }
+          filesDiv.dataset.loaded = '1';
+        })
+        .catch(() => { filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">Could not load files.</span>'; });
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      const yy = String(d.getFullYear()).slice(2).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      let h = d.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      const min = String(d.getMinutes()).padStart(2,'0');
+      const sec = String(d.getSeconds()).padStart(2,'0');
+      return `${yy}/${mm}/${dd}, ${String(h).padStart(2,'0')}:${min}:${sec} ${ampm}`;
+    }
+
+    function showDetail(name, fullName, url, desc, lang, pushed, created, stars, forks, issues) {
+      currentFullName = fullName;
+      document.querySelectorAll('.repo').forEach(r => r.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById('placeholder').style.display = 'none';
+      const content = document.getElementById('detail-content');
+      content.style.display = 'flex';
+      document.getElementById('detail').classList.remove('empty');
+      document.getElementById('detail-name').textContent = name;
+      document.getElementById('detail-desc').textContent = desc;
+      document.getElementById('d-lang').textContent = lang;
+      document.getElementById('d-stars').textContent = stars;
+      document.getElementById('d-forks').textContent = forks;
+      document.getElementById('d-issues').textContent = issues;
+      document.getElementById('d-pushed').textContent = pushed;
+      document.getElementById('d-created').textContent = created;
+      document.getElementById('detail-link').href = url;
+
+      const list = document.getElementById('commits-list');
+      list.innerHTML = '<span id="commits-loading">Loading commits...</span>';
+
+      fetch(`https://api.github.com/repos/${fullName}/commits?per_page=100`)
+        .then(r => r.json())
+        .then(commits => {
+          if (!Array.isArray(commits) || commits.length === 0) {
+            list.innerHTML = '<span style="color:#484f58">No commits found.</span>';
+            return;
+          }
+          const groups = {};
+          const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          commits.forEach((c, idx) => {
+            const d = new Date(c.commit.author.date);
+            const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+            const dayLabel = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+            if (!groups[dayKey]) groups[dayKey] = { label: dayLabel, entries: [] };
+            groups[dayKey].entries.push({c, idx});
+          });
+          list.innerHTML = Object.entries(groups).map(([day, {label, entries}]) => {
+            const cards = entries.map(({c, idx}) => {
+              const msg = c.commit.message.split('\n')[0];
+              const author = c.commit.author.name;
+              const d = new Date(c.commit.author.date);
+              let h = d.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+              h = h % 12 || 12;
+              const time = `${String(h).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} ${ampm}`;
+              const sha = c.sha;
+              return `<div class="commit" id="commit-${idx}" onclick="toggleCommit(${idx},'${sha}')">
+                <div class="commit-header">
+                  <span class="commit-msg">${escHtml(msg)}<span class="commit-expand">▶</span></span>
+                  <div class="commit-right">
+                    <span class="commit-time">${time}</span>
+                    <span class="commit-author">${escHtml(author)}</span>
+                  </div>
+                </div>
+                <div class="commit-files" id="files-${idx}"></div>
+              </div>`;
+            }).join('');
+            return `<div class="commit-day"><span class="commit-day-label">${label}</span>${cards}</div>`;
+          }).join('');
+        })
+        .catch(() => { list.innerHTML = '<span style="color:#484f58">Could not load commits.</span>'; });
+    }
+  </script>
+</body>
+</html>
