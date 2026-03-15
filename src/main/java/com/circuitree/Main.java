@@ -2,6 +2,7 @@ package com.circuitree;
 
 import com.circuitree.html.HtmlGenerator;
 import com.circuitree.server.LocalServer;
+import com.circuitree.ui.LoadingScreen;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -12,14 +13,16 @@ public class Main {
     private static final String USERNAME = "atlee-circuitree";
 
     public static void main(String[] args) throws IOException {
+        LoadingScreen loading = new LoadingScreen();
+
         String html = HtmlGenerator.generate(USERNAME);
-
-        // Write docs/index.html for GitHub Pages
         HtmlGenerator.writeToFile(html, new File("docs/index.html"));
-        System.out.println("Written to docs/index.html");
 
-        // Also serve locally
-        new LocalServer(html).start();
-        Desktop.getDesktop().browse(URI.create("http://localhost:8080"));
+        LocalServer server = new LocalServer(html);
+        server.start();
+
+        loading.close();
+
+        Desktop.getDesktop().browse(URI.create("http://localhost:" + server.getPort()));
     }
 }
