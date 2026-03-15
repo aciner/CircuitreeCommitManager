@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Repositories</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; height: 100vh; background: #0d1117; color: #c9d1d9; overflow: hidden; }
+
+    /* Left panel */
+    #sidebar { width: 320px; min-width: 320px; height: 100vh; overflow-y: auto; padding: 24px 16px; border-right: 1px solid #21262d; }
+    #sidebar h1 { font-size: 1.6em; color: #e6edf3; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+    .repo { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px 16px; margin: 8px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s, box-shadow 0.2s; }
+    .repo:hover, .repo.active { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88,166,255,0.1); }
+    .repo-name { font-weight: 600; color: #58a6ff; font-size: 0.95em; }
+    .date { color: #484f58; font-size: 0.75em; white-space: nowrap; margin-left: 10px; }
+    details { margin-top: 6px; }
+    details > summary { cursor: pointer; color: #6e7681; font-size: 0.85em; padding: 8px 4px; list-style: none; display: flex; align-items: center; gap: 6px; user-select: none; text-decoration: underline; }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before { content: '▶'; font-size: 0.7em; transition: transform 0.2s; display: inline-block; }
+    details[open] > summary::before { transform: rotate(90deg); }
+    details > summary:hover { color: #8b949e; }
+
+    /* Right panel */
+    #detail { flex: 1; padding: 48px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+    #detail.empty { justify-content: center; align-items: center; }
+    #placeholder { color: #30363d; font-size: 1.1em; }
+    #detail-name { font-size: 2em; font-weight: 700; color: #e6edf3; }
+    #detail-desc { color: #8b949e; font-size: 1em; line-height: 1.6; }
+    #detail-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+    .meta-item { display: flex; flex-direction: column; gap: 4px; }
+    .meta-label { font-size: 0.75em; color: #484f58; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 1em; color: #c9d1d9; font-weight: 600; }
+    #detail-link { display: inline-block; padding: 10px 20px; background: #238636; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9em; align-self: flex-start; transition: background 0.2s; }
+    #detail-link:hover { background: #2ea043; }
+
+    /* Commits */
+    #commits-section { display: flex; flex-direction: column; gap: 18px; padding-top: 10px; }
+    #commits-section h2 { font-size: 1em; color: #e6edf3; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+    .commit-day { display: flex; flex-direction: column; gap: 2px; }
+    .commit-day + .commit-day { margin-top: 16px; }
+    .commit-day-label { font-size: 0.72em; font-weight: 600; color: #8b949e; letter-spacing: 0.8px; text-transform: uppercase; padding: 0 0 5px 0; margin-bottom: 3px; border-bottom: 1px solid #21262d; }
+    .commit { background: #161b22; border-left: 2px solid #21262d; border-radius: 0 6px 6px 0; padding: 8px 14px; margin-left: 16px; cursor: pointer; transition: border-color 0.15s; }
+    .commit:hover { border-left-color: #58a6ff; }
+    .commit-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .commit-msg { font-size: 0.88em; color: #c9d1d9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .commit-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+    .commit-time { font-size: 0.76em; color: #8b949e; }
+    .commit-author { font-size: 0.7em; color: #484f58; }
+    .commit-expand { font-size: 0.65em; color: #484f58; margin-left: 6px; transition: transform 0.15s; display: inline-block; }
+    .commit.expanded .commit-expand { transform: rotate(90deg); }
+
+    /* Files */
+    .commit-files { display: none; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #21262d; }
+    .commit-files.open { display: flex; }
+    .file-row { display: flex; flex-direction: column; background: #0d1117; border: 1px solid #21262d; border-radius: 6px; overflow: hidden; }
+    .file-header { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; transition: background 0.15s; user-select: none; }
+    .file-header:hover { background: #1c2128; }
+    .file-chevron { font-size: 0.6em; color: #484f58; transition: transform 0.15s; }
+    .file-row.open .file-chevron { transform: rotate(90deg); }
+    .file-status { font-size: 0.68em; font-weight: 700; padding: 1px 5px; border-radius: 4px; text-transform: uppercase; }
+    .file-status.added    { background: rgba(63,185,80,0.15);  color: #3fb950; }
+    .file-status.removed  { background: rgba(248,81,73,0.15);  color: #f85149; }
+    .file-status.modified { background: rgba(210,153,34,0.15); color: #d2a22e; }
+    .file-name { font-size: 0.8em; color: #c9d1d9; flex: 1; }
+    .file-changes { font-size: 0.72em; color: #484f58; white-space: nowrap; }
+    .file-diff { display: none; overflow-x: auto; border-top: 1px solid #21262d; }
+    .file-diff.open { display: block; }
+    .file-diff pre { font-family: 'Consolas', monospace; font-size: 0.76em; line-height: 0.9; padding: 3px 10px; margin: 0; background: #010409; }
+    .diff-add  { color: #3fb950; background: rgba(63,185,80,0.08);  display: block; }
+    .diff-del  { color: #f85149; background: rgba(248,81,73,0.08);  display: block; }
+    .diff-hunk { color: #79c0ff; display: block; }
+    .diff-ctx  { color: #8b949e;  display: block; }
+    #commits-loading { color: #484f58; font-size: 0.9em; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #30363d; }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h1>Repositories</h1>
+    <div id="repo-list"><span style="color:#484f58">Loading...</span></div>
+  </div>
+  <div id="detail" class="empty">
+    <span id="placeholder">← Select a repository</span>
+    <div id="detail-content" style="display:none; width:100%; flex-direction:column; gap:20px;">
+      <div id="detail-name"></div>
+      <div id="detail-desc"></div>
+      <div id="detail-meta">
+        <div class="meta-item"><span class="meta-label">Language</span><span class="meta-value" id="d-lang"></span></div>
+        <div class="meta-item"><span class="meta-label">Stars</span><span class="meta-value" id="d-stars"></span></div>
+        <div class="meta-item"><span class="meta-label">Forks</span><span class="meta-value" id="d-forks"></span></div>
+        <div class="meta-item"><span class="meta-label">Open Issues</span><span class="meta-value" id="d-issues"></span></div>
+        <div class="meta-item"><span class="meta-label">Last Pushed</span><span class="meta-value" id="d-pushed"></span></div>
+        <div class="meta-item"><span class="meta-label">Created</span><span class="meta-value" id="d-created"></span></div>
+      </div>
+      <a id="detail-link" target="_blank">Open on GitHub</a>
+      <div id="commits-section">
+        <h2>Commits</h2>
+        <div id="commits-list"><span id="commits-loading">Loading commits...</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const USERNAME = 'atlee-circuitree';
+    let repoData = [];
+    let currentFullName = '';
+
+    const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function formatDateTime(iso) {
+      const d = new Date(iso);
+      let h = d.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${String(d.getFullYear()).slice(2)}, ${String(h).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} ${ampm}`;
+    }
+
+    function dayLabel(d) {
+      return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+
+    function dayKey(d) {
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    }
+
+    // ── Repo list ─────────────────────────────────────────
+    window.addEventListener('load', () => {
+      fetch(`https://api.github.com/users/${USERNAME}/repos?per_page=100&sort=pushed`)
+        .then(r => r.json())
+        .then(repos => {
+          repoData = repos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
+          renderRepos();
+        })
+        .catch(() => {
+          document.getElementById('repo-list').innerHTML = '<span style="color:#f85149">Failed to load repositories.</span>';
+        });
+    });
+
+    function renderRepos() {
+      const top  = repoData.slice(0, 5);
+      const rest = repoData.slice(5);
+      let html = top.map((r, i) => repoCard(r, i)).join('');
+      if (rest.length > 0) {
+        html += `<details><summary>See more</summary>${rest.map((r, i) => repoCard(r, i + 5)).join('')}</details>`;
+      }
+      document.getElementById('repo-list').innerHTML = html;
+    }
+
+    function repoCard(r, i) {
+      return `<div class="repo" onclick="showDetail(${i})">
+        <span class="repo-name">${escHtml(r.name)}</span>
+        <span class="date">${formatDateTime(r.pushed_at)}</span>
+      </div>`;
+    }
+
+    // ── Repo detail ───────────────────────────────────────
+    function showDetail(idx) {
+      const r = repoData[idx];
+      currentFullName = r.full_name;
+      document.querySelectorAll('.repo').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById('placeholder').style.display = 'none';
+      const content = document.getElementById('detail-content');
+      content.style.display = 'flex';
+      document.getElementById('detail').classList.remove('empty');
+      document.getElementById('detail-name').textContent    = r.name;
+      document.getElementById('detail-desc').textContent    = r.description || 'No description.';
+      document.getElementById('d-lang').textContent         = r.language    || 'Unknown';
+      document.getElementById('d-stars').textContent        = r.stargazers_count;
+      document.getElementById('d-forks').textContent        = r.forks_count;
+      document.getElementById('d-issues').textContent       = r.open_issues_count;
+      document.getElementById('d-pushed').textContent       = formatDateTime(r.pushed_at);
+      document.getElementById('d-created').textContent      = formatDateTime(r.created_at);
+      document.getElementById('detail-link').href           = r.html_url;
+      loadCommits(r.full_name);
+    }
+
+    // ── Commits ───────────────────────────────────────────
+    function loadCommits(fullName) {
+      const list = document.getElementById('commits-list');
+      list.innerHTML = '<span id="commits-loading">Loading commits...</span>';
+      fetch(`https://api.github.com/repos/${fullName}/commits?per_page=100`)
+        .then(r => r.json())
+        .then(commits => {
+          if (!Array.isArray(commits) || commits.length === 0) {
+            list.innerHTML = '<span style="color:#484f58">No commits found.</span>';
+            return;
+          }
+          const groups = {};
+          commits.forEach((c, idx) => {
+            const d = new Date(c.commit.author.date);
+            const k = dayKey(d);
+            if (!groups[k]) groups[k] = { label: dayLabel(d), entries: [] };
+            groups[k].entries.push({ c, idx });
+          });
+          list.innerHTML = Object.values(groups).map(({ label, entries }) => {
+            const cards = entries.map(({ c, idx }) => {
+              const d = new Date(c.commit.author.date);
+              let h = d.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+              h = h % 12 || 12;
+              const time = `${String(h).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} ${ampm}`;
+              return `<div class="commit" id="commit-${idx}" onclick="toggleCommit(${idx},'${c.sha}')">
+                <div class="commit-header">
+                  <span class="commit-msg">${escHtml(c.commit.message.split('\n')[0])}<span class="commit-expand">▶</span></span>
+                  <div class="commit-right">
+                    <span class="commit-time">${time}</span>
+                    <span class="commit-author">${escHtml(c.commit.author.name)}</span>
+                  </div>
+                </div>
+                <div class="commit-files" id="files-${idx}"></div>
+              </div>`;
+            }).join('');
+            return `<div class="commit-day"><span class="commit-day-label">${label}</span>${cards}</div>`;
+          }).join('');
+        })
+        .catch(() => { list.innerHTML = '<span style="color:#484f58">Could not load commits.</span>'; });
+    }
+
+    // ── Commit files ──────────────────────────────────────
+    function toggleCommit(idx, sha) {
+      const filesDiv = document.getElementById('files-' + idx);
+      const commitEl = document.getElementById('commit-' + idx);
+      if (!filesDiv) return;
+      if (filesDiv.classList.contains('open')) {
+        filesDiv.classList.remove('open');
+        commitEl && commitEl.classList.remove('expanded');
+        return;
+      }
+      commitEl && commitEl.classList.add('expanded');
+      if (filesDiv.dataset.loaded) { filesDiv.classList.add('open'); return; }
+      filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">Loading files...</span>';
+      filesDiv.classList.add('open');
+      fetch(`https://api.github.com/repos/${currentFullName}/commits/${sha}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.files || data.files.length === 0) {
+            filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">No files changed.</span>';
+          } else {
+            filesDiv.innerHTML = data.files.map((f, i) => {
+              const fid = `diff-${idx}-${i}`;
+              const sc  = f.status === 'added' ? 'added' : f.status === 'removed' ? 'removed' : 'modified';
+              return `<div class="file-row" id="row-${fid}">
+                <div class="file-header" onclick="toggleFile(event,'${fid}')">
+                  <span class="file-chevron">▶</span>
+                  <span class="file-status ${sc}">${f.status}</span>
+                  <span class="file-name">${escHtml(f.filename)}</span>
+                  <span class="file-changes">+${f.additions} -${f.deletions}</span>
+                </div>
+                <div class="file-diff" id="${fid}">
+                  <pre>${renderPatch(f.patch)}</pre>
+                </div>
+              </div>`;
+            }).join('');
+          }
+          filesDiv.dataset.loaded = '1';
+        })
+        .catch(() => { filesDiv.innerHTML = '<span style="color:#484f58;font-size:0.82em">Could not load files.</span>'; });
+    }
+
+    function toggleFile(e, fileId) {
+      e.stopPropagation();
+      document.getElementById(fileId)?.classList.toggle('open');
+      document.getElementById('row-' + fileId)?.classList.toggle('open');
+    }
+
+    function renderPatch(patch) {
+      if (!patch) return '<span class="diff-ctx">Binary or empty file</span>';
+      return patch.split('\n').map(line => {
+        if (line.startsWith('+'))  return `<span class="diff-add">${escHtml(line)}</span>`;
+        if (line.startsWith('-'))  return `<span class="diff-del">${escHtml(line)}</span>`;
+        if (line.startsWith('@@')) return `<span class="diff-hunk">${escHtml(line)}</span>`;
+        return `<span class="diff-ctx">${escHtml(line)}</span>`;
+      }).join('\n');
+    }
+  </script>
+</body>
+</html>
