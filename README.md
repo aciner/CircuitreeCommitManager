@@ -1,2 +1,2 @@
 # CircuitreeCommitManager
-A commit history organizer for atlee circuitree.a
+A commit history organizer for atlee circuitree.
