@@ -18,10 +18,12 @@ public class HtmlGenerator {
 
                     /* Left panel */
                     #sidebar { width: 320px; min-width: 320px; height: 100vh; overflow-y: auto; padding: 24px 16px; border-right: 1px solid #21262d; }
-                    #sidebar h1 { font-size: 1.6em; color: #e6edf3; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
-                    .repo { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px 16px; margin: 8px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s, box-shadow 0.2s; }
+                    #sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #21262d; }
+                    #owner-avatar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #21262d; flex-shrink: 0; }
+                    #sidebar h1 { font-size: 1.6em; color: #e6edf3; margin: 0; }
+                    .repo { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px 16px; margin: 8px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s, box-shadow 0.2s; min-width: 0; gap: 8px; }
                     .repo:hover, .repo.active { border-color: #58a6ff; box-shadow: 0 0 0 2px rgba(88,166,255,0.1); }
-                    .repo-name { font-weight: 600; color: #58a6ff; font-size: 0.95em; }
+                    .repo-name { font-weight: 600; color: #58a6ff; font-size: 0.95em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
                     .date { color: #484f58; font-size: 0.75em; white-space: nowrap; margin-left: 10px; }
                     details { margin-top: 6px; }
                     details > summary { cursor: pointer; color: #6e7681; font-size: 0.85em; padding: 8px 4px; list-style: none; display: flex; align-items: center; gap: 6px; user-select: none; text-decoration: underline; }
@@ -35,7 +37,7 @@ public class HtmlGenerator {
                     #detail.empty { justify-content: center; align-items: center; }
                     #placeholder { color: #30363d; font-size: 1.1em; }
                     #detail-name { font-size: 2em; font-weight: 700; color: #e6edf3; }
-                    #detail-desc { color: #8b949e; font-size: 1em; line-height: 1.6; }
+                    #detail-desc { color: #8b949e; font-size: 0.9em; line-height: 1.6; padding: 8px 14px; border-left: 2px solid #21262d; margin-left: 4px; word-break: break-word; }
                     #detail-meta { display: flex; gap: 24px; flex-wrap: wrap; }
                     .meta-item { display: flex; flex-direction: column; gap: 4px; }
                     .meta-label { font-size: 0.75em; color: #484f58; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -45,7 +47,11 @@ public class HtmlGenerator {
 
                     /* Commits */
                     #commits-section { display: flex; flex-direction: column; gap: 18px; padding-top: 10px; }
-                    #commits-section h2 { font-size: 1em; color: #e6edf3; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+                    #commits-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #21262d; }
+                    #commits-section h2 { font-size: 1em; color: #e6edf3; }
+                    #branch-select { background: #161b22; color: #c9d1d9; border: 1px solid #21262d; border-radius: 6px; padding: 4px 8px; font-size: 0.8em; cursor: pointer; outline: none; }
+                    #branch-select:hover { border-color: #58a6ff; }
+                    #branch-select:disabled { opacity: 0.4; cursor: default; }
                     .commit-day { display: flex; flex-direction: column; gap: 2px; }
                     .commit-day + .commit-day { margin-top: 16px; }
                     .commit-day-label { font-size: 0.72em; font-weight: 600; color: #8b949e; letter-spacing: 0.8px; text-transform: uppercase; padding: 0 0 5px 0; margin-bottom: 3px; border-bottom: 1px solid #21262d; }
@@ -58,9 +64,10 @@ public class HtmlGenerator {
                     .commit-author { font-size: 0.7em; color: #484f58; }
                     .commit-expand { font-size: 0.65em; color: #484f58; margin-left: 6px; transition: transform 0.15s; display: inline-block; }
                     .commit.expanded .commit-expand { transform: rotate(90deg); }
-                    .commit-annotation { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 10px 14px; background: #0d1117; border-radius: 6px; margin-bottom: 8px; }
+                    .commit-annotation { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; background: #0d1117; border-radius: 6px; margin-bottom: 8px; }
                     .annotation-name { font-size: 0.85em; font-weight: 700; color: #e6edf3; }
-                    .annotation-text { font-size: 0.85em; color: #8b949e; text-align: right; flex: 1; }
+                    .annotation-text { font-size: 0.82em; color: #6e7681; padding-left: 16px; font-family: 'Consolas', monospace; }
+                    .annotation-text::before { content: '// '; color: #484f58; }
 
                     /* Files */
                     .commit-files { display: none; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #21262d; }
@@ -94,7 +101,10 @@ public class HtmlGenerator {
                 </head>
                 <body>
                   <div id="sidebar">
-                    <h1>Repositories</h1>
+                    <div id="sidebar-header">
+                      <img id="owner-avatar" src="https://github.com/{{USERNAME}}.png?size=80" alt="{{USERNAME}}">
+                      <h1>Repositories</h1>
+                    </div>
                     <div id="repo-list"><span style="color:#484f58">Loading...</span></div>
                   </div>
                   <div id="detail" class="empty">
@@ -112,7 +122,10 @@ public class HtmlGenerator {
                       </div>
                       <a id="detail-link" target="_blank">Open on GitHub</a>
                       <div id="commits-section">
-                        <h2>Commits</h2>
+                        <div id="commits-header">
+                          <select id="branch-select" disabled onchange="onBranchChange()"><option>Loading...</option></select>
+                          <h2>Commits</h2>
+                        </div>
                         <div id="commits-list"><span id="commits-loading">Loading commits...</span></div>
                       </div>
                     </div>
@@ -193,14 +206,38 @@ public class HtmlGenerator {
                       document.getElementById('d-pushed').textContent       = formatDateTime(r.pushed_at);
                       document.getElementById('d-created').textContent      = formatDateTime(r.created_at);
                       document.getElementById('detail-link').href           = r.html_url;
-                      loadCommits(r.full_name);
+                      loadBranches(r.full_name);
+                    }
+
+                    // ── Branches ─────────────────────────────────────────
+                    function loadBranches(fullName) {
+                      const select = document.getElementById('branch-select');
+                      select.innerHTML = '<option>Loading...</option>';
+                      select.disabled = true;
+                      fetch(`https://api.github.com/repos/${fullName}/branches?per_page=100`)
+                        .then(r => r.json())
+                        .then(branches => {
+                          if (!Array.isArray(branches) || branches.length === 0) {
+                            select.innerHTML = '<option>No branches</option>';
+                            return;
+                          }
+                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}">${escHtml(b.name)}</option>`).join('');
+                          select.disabled = false;
+                          loadCommits(fullName, select.value);
+                        })
+                        .catch(() => { select.innerHTML = '<option>Error</option>'; });
+                    }
+
+                    function onBranchChange() {
+                      const branch = document.getElementById('branch-select').value;
+                      loadCommits(currentFullName, branch);
                     }
 
                     // ── Commits ───────────────────────────────────────────
-                    function loadCommits(fullName) {
+                    function loadCommits(fullName, branch) {
                       const list = document.getElementById('commits-list');
                       list.innerHTML = '<span id="commits-loading">Loading commits...</span>';
-                      fetch(`https://api.github.com/repos/${fullName}/commits?per_page=100`)
+                      fetch(`https://api.github.com/repos/${fullName}/commits?per_page=100&sha=${encodeURIComponent(branch)}`)
                         .then(r => r.json())
                         .then(commits => {
                           if (!Array.isArray(commits) || commits.length === 0) {

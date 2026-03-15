@@ -32,10 +32,11 @@ public class LoadingScreen {
         window.pack();
         window.setLocationRelativeTo(null);
         window.setAlwaysOnTop(true);
-        window.setVisible(true);
+
+        SwingUtilities.invokeLater(() -> window.setVisible(true));
     }
 
     public void close() {
-        window.dispose();
+        SwingUtilities.invokeLater(window::dispose);
     }
 }
