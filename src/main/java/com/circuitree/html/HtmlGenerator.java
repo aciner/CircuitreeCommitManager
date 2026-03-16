@@ -221,9 +221,11 @@ public class HtmlGenerator {
                             select.innerHTML = '<option>No branches</option>';
                             return;
                           }
-                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}" ${b.name === defaultBranch ? 'selected' : ''}>${escHtml(b.name)}</option>`).join('');
+                          const names = branches.map(b => b.name);
+                          const preferred = ['main', 'master'].find(n => names.includes(n)) || defaultBranch || names[0];
+                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}" ${b.name === preferred ? 'selected' : ''}>${escHtml(b.name)}</option>`).join('');
                           select.disabled = false;
-                          loadCommits(fullName, defaultBranch || select.value);
+                          loadCommits(fullName, preferred);
                         })
                         .catch(() => { select.innerHTML = '<option>Error</option>'; });
                     }
