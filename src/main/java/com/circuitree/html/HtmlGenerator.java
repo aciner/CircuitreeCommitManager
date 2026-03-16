@@ -223,7 +223,8 @@ public class HtmlGenerator {
                           }
                           const names = branches.map(b => b.name);
                           const preferred = ['main', 'master'].find(n => names.includes(n)) || defaultBranch || names[0];
-                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}" ${b.name === preferred ? 'selected' : ''}>${escHtml(b.name)}</option>`).join('');
+                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}">${escHtml(b.name)}</option>`).join('');
+                          select.value = preferred;
                           select.disabled = false;
                           loadCommits(fullName, preferred);
                         })
