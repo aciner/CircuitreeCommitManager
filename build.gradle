@@ -42,6 +42,7 @@ launch4j {
     jarTask = project.tasks.shadowJar
     jreMinVersion = '17'
     icon = "${projectDir}/src/main/resources/icon.ico"
+    chdir = '../..'
 }
 
 run.dependsOn createExe
