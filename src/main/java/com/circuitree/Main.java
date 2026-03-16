@@ -12,13 +12,17 @@ import java.net.URI;
 public class Main {
     private static final String  USERNAME    = "atlee-circuitree";
     private static final boolean USE_PAGES   = true;
-    private static final boolean DEBUG_LOCAL = false;
+    private static final boolean DEBUG_LOCAL = true;
 
     public static void main(String[] args) throws IOException {
         LoadingScreen loading = new LoadingScreen();
 
         String html = HtmlGenerator.generate(USERNAME);
         HtmlGenerator.writeToFile(html, new File("docs/index.html"));
+
+        if (!DEBUG_LOCAL) {
+            gitPush();
+        }
 
         loading.close();
 
@@ -32,6 +36,25 @@ public class Main {
             LocalServer server = new LocalServer(html);
             server.start();
             Desktop.getDesktop().browse(URI.create("http://localhost:" + server.getPort()));
+        }
+    }
+
+    private static void gitPush() throws IOException {
+        File repoDir = new File(".");
+        run(repoDir, "git", "add", "docs/index.html");
+        run(repoDir, "git", "commit", "-m", "docs // Auto-update index.html for " + USERNAME);
+        run(repoDir, "git", "push");
+    }
+
+    private static void run(File dir, String... command) throws IOException {
+        try {
+            new ProcessBuilder(command)
+                .directory(dir)
+                .inheritIO()
+                .start()
+                .waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }
