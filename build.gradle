@@ -42,10 +42,15 @@ launch4j {
     jarTask = project.tasks.shadowJar
     jreMinVersion = '17'
     icon = "${projectDir}/src/main/resources/icon.ico"
-    chdir = '../..'
+    chdir = ''
 }
 
-run.dependsOn createExe
+task copyExe(type: Copy, dependsOn: createExe) {
+    from "${buildDir}/launch4j/${githubUsername}-RepoOrganizer.exe"
+    into projectDir
+}
+
+run.dependsOn copyExe
 
 // Fetches the GitHub user's avatar and saves it as an ICO file
 task downloadIcon {
