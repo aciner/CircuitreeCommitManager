@@ -12,7 +12,7 @@ import java.net.URI;
 public class Main {
     private static final String  USERNAME    = "atlee-circuitree";
     private static final boolean USE_PAGES   = true;
-    private static final boolean DEBUG_LOCAL = true;
+    private static final boolean DEBUG_LOCAL = false;
 
     public static void main(String[] args) throws IOException {
         LoadingScreen loading = new LoadingScreen();
