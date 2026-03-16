@@ -206,11 +206,11 @@ public class HtmlGenerator {
                       document.getElementById('d-pushed').textContent       = formatDateTime(r.pushed_at);
                       document.getElementById('d-created').textContent      = formatDateTime(r.created_at);
                       document.getElementById('detail-link').href           = r.html_url;
-                      loadBranches(r.full_name);
+                      loadBranches(r.full_name, r.default_branch);
                     }
 
                     // ── Branches ─────────────────────────────────────────
-                    function loadBranches(fullName) {
+                    function loadBranches(fullName, defaultBranch) {
                       const select = document.getElementById('branch-select');
                       select.innerHTML = '<option>Loading...</option>';
                       select.disabled = true;
@@ -221,9 +221,9 @@ public class HtmlGenerator {
                             select.innerHTML = '<option>No branches</option>';
                             return;
                           }
-                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}">${escHtml(b.name)}</option>`).join('');
+                          select.innerHTML = branches.map(b => `<option value="${escHtml(b.name)}" ${b.name === defaultBranch ? 'selected' : ''}>${escHtml(b.name)}</option>`).join('');
                           select.disabled = false;
-                          loadCommits(fullName, select.value);
+                          loadCommits(fullName, defaultBranch || select.value);
                         })
                         .catch(() => { select.innerHTML = '<option>Error</option>'; });
                     }
